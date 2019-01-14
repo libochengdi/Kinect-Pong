@@ -13,9 +13,10 @@ int ballposx = 250;
 int ballposy = 250;
 float xpos = 150; 
 float ypos = 150;
-int ballvelX = int(random(2, 4));
-int ballvelY = int(random(2, 4));
-int paddlevelY = 5; 
+int ballvelX = 10;
+int ballvelY = 10;
+int paddlevelY = 40;
+int paddle2velY = 20;
 int rectSize = 100;
 
 int paddleHeight = 90;
@@ -31,14 +32,23 @@ int count = 0;
 int lastAvgDepth = 0;
 int [] rawDepthData; 
 int rawDepthDataSum;
+int rawDepthDataSum2;
 int rawDepthDataLth; 
 int rawDepthDataAvg;
+int rawDepthDataIndex;
+int [] rawDepthData2;
+int rawDepthDataIndex2;
+int rawDepthDataAvg2;
 
 boolean absoluteWinFlag = false;
+boolean firstTimeTest = true; 
 
+int dataIsBigger;
+int dataIsSmaller;
+int dataIsEqual;
 // boolean absoluteWinFlag = 
 
-void setup() {   
+void setup() {
     size(500, 500, P2D);
     noStroke(); //Disabling the outline of shapes
     ellipseMode(RADIUS);
@@ -46,21 +56,32 @@ void setup() {
     kinect = new KinectPV2(this);
     kinect.enableDepthImg(true);
     kinect.init();
+    frameRate(120);
 }
 
 void draw() {
     background(0, 0, 0);
-
     //values for [0 - 256] strip
     rawDepthData = kinect.getRawDepth256Data();
+    // rawDepthDataIndex = rawDepthData.length / 2;
     rawDepthDataLth = rawDepthData.length;
-    for (int index = 0; index < rawDepthDataLth; index += 1) {
+        
+    for (int index = 0; index < rawDepthDataLth; index += 80) {
         rawDepthDataSum += rawDepthData[index];
     }
-    // if (count == 0) {
-    lastAvgDepth = rawDepthDataSum / rawDepthDataLth;
 
+    rawDepthDataAvg = rawDepthDataSum / rawDepthDataLth;
+
+    delay(100);
+
+    // if (count == 0) {
+    // lastAvgDepth = rawDepthDataSum / rawDepthDataLth;
+
+    // rawDepthDataAvg = rawDepthData[rawDepthDataIndex];
+    //   collide();
     move();
+    
+    
     display();
 }
 
@@ -68,36 +89,8 @@ void move() {
     // Pong game mechanics
 
     absoluteWinFlag = false;
-
-    //values for [0 - 256] strip
-    rawDepthData = kinect.getRawDepthData();
-    rawDepthDataLth = rawDepthData.length;
-    for (int index = 0; index < rawDepthDataLth; index += 1) {
-        rawDepthDataSum += rawDepthData[index];
-    }
-    rawDepthDataAvg = rawDepthDataSum / rawDepthDataLth;
-
-    if (pad1ypos < 0) {
-        pad1ypos += paddlevelY;
-    }
-    else if (pad1ypos > windowY - paddleHeight/2) { 
-        pad1ypos -= paddlevelY;
-    }
-     
-    if (pad2ypos < 0) {
-        pad2ypos += paddlevelY;
-    }
-    else if (pad2ypos > windowY - paddleHeight/2) { 
-        pad2ypos -= paddlevelY;
-    }
-
-    if ( ballposx == pad1xpos && ballposy >= pad1ypos && ballposy <= pad1ypos+paddleHeight ) {
-        ballvelX *= -1.1;
-    } 
-
-    else if ( ballposx == pad2xpos && ballposy >= pad2ypos && ballposy <= pad2ypos+paddleHeight ) {
-        ballvelX *= -1.1;
-    }
+   
+    // rawDepthDataAvg2 = rawDepthDataSum2 / rawDepthData2.length;
 
     // If the ball his the y-axis walls
     if (ballposy > windowY || ballposy < 0 ) {
@@ -119,20 +112,14 @@ void move() {
         // Maybe let ball go back?
     }
 
-    if ( rawDepthDataAvg > lastAvgDepth) {
-        pad1ypos -= paddlevelY; // Woah, slow down!
-    }
+    /* print("trial number #" + count);
+    print("dataIsBigger:" + dataIsBigger);
+    print("dataIsSmaller:" + dataIsSmaller); 
+    print("dataIsEqual:" + dataIsEqual);
 
-    else if ( rawDepthDataAvg < lastAvgDepth) { 
-        pad1ypos += paddlevelY;
-    }
-
-    /* else if ( rawDepthDataAvg == lastAvgDepth) { 
+    else if ( rawDepthDataAvg == lastAvgDepth) { 
         print("It's a trap!");
     } */
-
-    lastAvgDepth = rawDepthDataAvg/2;
-    // count += 1;
     
     // Moving the paddles by pressing keys
     if (keyPressed) {
@@ -151,8 +138,62 @@ void move() {
         }
     }
 
+    rawDepthData2 = kinect.getRawDepth256Data();
+    
+    for (int i = 0; i < rawDepthData2.length; i += 80) {
+        if (rawDepthData2[i] > rawDepthData[i]) { 
+            dataIsBigger += 1; 
+        }
+        else if (rawDepthData2[i] < rawDepthData[i]) {
+            dataIsSmaller += 1;
+        }
+        else if (rawDepthData2[i] == rawDepthData[i]) { 
+            dataIsEqual += 1;
+        }
+    }
+
+    if (dataIsEqual <= dataIsBigger + dataIsSmaller) { // Number of the beast... 
+        if ( dataIsBigger > dataIsSmaller) {
+            // firstTimeTest = false;
+            pad1ypos -= paddle2velY; // Woah, slow down!
+        }
+
+        else if ( dataIsSmaller > dataIsBigger) { 
+            // firstTimeTest = false;
+            pad1ypos += paddle2velY;
+        }
+    }
+
+    dataIsBigger = 0;
+    dataIsEqual = 0;
+    dataIsSmaller = 0;
+    count += 1;
+
+    if (pad1ypos < 0) {
+        pad1ypos = 0;
+    }
+    else if (pad1ypos > windowY - paddleHeight/2) { 
+        pad1ypos = windowY - paddleHeight/2;
+    }
+     
+    if (pad2ypos < 0) {
+        pad2ypos = 0;
+    }
+    else if (pad2ypos > windowY - paddleHeight/2) { 
+        pad2ypos = windowY - paddleHeight/2;
+    }
+
+    if ( ballposx == pad1xpos && ballposy-rad >= pad1ypos && ballposy+rad <= pad1ypos+paddleHeight ) {
+        ballvelX *= -1;
+    } 
+
+    else if ( ballposx == pad2xpos && ballposy-rad >= pad2ypos && ballposy+rad <= pad2ypos+paddleHeight ) {
+        ballvelX *= -1;
+    }
+
     ballposx = ballposx + ballvelX; // Updating the ball's speed
     ballposy = ballposy + ballvelY;
+
 }
 
 void init() {
@@ -161,10 +202,14 @@ void init() {
     ellipse(windowX/2, windowY/2, rad, rad);
     rect(initpad1Xpos, windowY/2, paddleWidth, paddleHeight);
     rect(initpad2Xpos, windowY/2, paddleWidth, paddleHeight);
+    pad1ypos = 250;
+    pad2ypos = 250;
     absoluteWinFlag = false;
     ballposx = windowX/2;
     ballposy = windowY/2;
-    lastAvgDepth = 0;
+    rawDepthDataAvg = 0;
+    rawDepthDataAvg2 = 0;
+    firstTimeTest = true;
 }
 
 void display() {
